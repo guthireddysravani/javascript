@@ -1,0 +1,116 @@
+package com.example.demo.controller;
+
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.util.ArrayList;
+
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.BasicResponseHandler;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.springframework.http.HttpStatus;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+public class lithiumapi {
+	 public static String getRestSession(String tzUname, String tzPassword, String tzURL)
+	            throws ClientProtocolException, IOException {
+
+	        System.out.println("Getting Session");
+	        String session = "";
+	        String url = tzURL + "/restapi/vc/authentication/sessions/login/?user.login=" + tzUname + "&user.password="
+	                + tzPassword + "&restapi.response_format=json";
+	        System.out.println("Request url = " + url);
+	        HttpClient httpclient = HttpClients.createDefault();
+	        HttpPost httpPost = new HttpPost(url);
+	        HttpResponse response = httpclient.execute(httpPost);
+	        System.out.println(response.getStatusLine());
+	        ObjectMapper objectMapper = new ObjectMapper();
+	        JsonNode tree = objectMapper.readTree(new BasicResponseHandler().handleResponse(response));
+	        System.out.println("***" + tree);
+	        System.out.println("----" + tree.get("response").get("value").get("$").textValue());
+	        session = tree.get("response").get("value").get("$").textValue();
+	        System.out.println("session" + session);
+	        if (response.getStatusLine().getStatusCode() != 200) {
+	            
+	            getRestSession(tzUname, tzPassword, tzURL);
+	           
+	        }
+	        return session;
+	    }
+	 public static JSONObject getV2QueryResponse( String query,String sessionkey) throws ClientProtocolException, IOException
+	             {
+		  String encodedQuerry = URLEncoder.encode(query, "UTF-8");
+	      String url ="https://italent2.demo.lithium.com/api/2.0/search?q="+encodedQuerry+"&restapi.session_key="+sessionkey;
+	       HttpClient client = HttpClients.createDefault();
+	       HttpGet request = new HttpGet(url);
+	       HttpResponse response = client.execute(request);
+	       int statusCode = response.getStatusLine().getStatusCode();
+           if (statusCode != HttpStatus.OK.value()) {
+               throw new RuntimeException("Failed with HTTP error code : " + statusCode);
+           }
+          HttpEntity httpEntity = response.getEntity();
+          String result = EntityUtils.toString(httpEntity);
+          JSONObject userJson = new JSONObject(result);
+	      
+          return userJson;
+	    }
+
+	 public static void main(String[] args) throws ClientProtocolException, IOException {
+		String sessionkey= getRestSession("venkatg","Q!w2e3r4","https://italent2.demo.lithium.com");
+		
+		String count="select count(*) from messages where replies.count(*) > 5 and depth=0 limit 100"; 
+		JSONObject  reponse=getV2QueryResponse(count,sessionkey);
+		JSONObject data=new JSONObject();
+       int counted=reponse.getJSONObject("data").getInt("count");
+       String query="";
+       ArrayList list=new ArrayList();
+      if(counted<100) {
+    	   int offset=5;
+    	   for(int i=0;offset>100;i++)
+    	   query="select * from messages where replies.count(*) > 5 and depth=0 limit 5 offset "+offset;
+    	      data=getV2QueryResponse(query,sessionkey);
+    	   offset=offset+5;
+       } 
+      
+       if(counted>100) {
+    	  
+    	   int limited=counted/100;
+    	   int limitvalue=100;
+    	   for(int i=0;i<limited;) {
+    	     query="select * from messages where replies.count(*) > 5 and depth=0 limit 100 offset"+limitvalue*i;
+    	       data=getV2QueryResponse(query,sessionkey);
+    	       
+    	       
+    	       System.out.println("pagination"+data);
+    	       i++;
+    	      }
+    	   
+       }
+      for (int i=0;i<data.getJSONObject("data").getJSONArray("items").length();i++)
+		{
+		
+			JSONArray array =data.getJSONObject("data").getJSONArray("items");
+		    int id=array.getJSONObject(i).getInt("id");
+		      System.out.println(id);
+		     
+		      list.add(id);
+    
+		}
+      
+    
+         
+    
+       System.out.println(list.size());
+      System.out.println(counted);
+	 
+	 }
+	 }

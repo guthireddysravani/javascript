@@ -1,0 +1,192 @@
+<style><!--
+.translation-section {
+   position: relative;
+  z-index: 9;
+}
+.form-section {
+ float: right;
+}
+.select-lang {
+ width: auto;
+  display: inline-block;
+}
+.translation-in {
+   margin-top:5px;
+   margin-bottom: 20px;
+     margin-left: 10px;
+ }
+.row
+{
+ margin-left: 5px;
+}
+.blogs-block {
+   border-top: 0;
+}
+
+.msgerror{ 
+    text-align: right;
+   font-family: Arial;
+	font-size: 16px;
+	color: red;
+	
+ }
+.msgsuccess{ 
+	text-align: right;
+	font-family: Arial;
+	font-size: 16px;
+	color: green;
+	
+}
+.msgerror
+{
+color:red;
+}
+
+.lds-ellipsis{
+position: fixed;
+    display: none;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0,0,0,0.6);
+    z-index: 2;
+    cursor: pointer;
+    user-select: none;
+}
+.lds-loading{
+background-color: #fff;
+    width: 160px;
+    height: 130px;
+    -webkit-border-radius: 10px;
+    -moz-border-radius: 10px;
+    -o-border-radius: 10px;
+    border-radius: 10px;
+    -webkit-box-shadow: 0 3px 7px rgba(0,0,0,.3);
+    -moz-box-shadow: 0 3px 7px rgba(0,0,0,.3);
+    box-shadow: 0 3px 7px rgba(0,0,0,.3);
+	text-align: center;
+	position: absolute;
+    top: 45%;
+    left: 50%;  
+   
+}
+--></style>
+<div class="translation-section">
+<div class="form-section row">
+<div class="lds-ellipsis" style="display: none;">
+<div class="lds-loading"><img alt="" src="https://d2x5ku95bkycr3.cloudfront.net/img/loading.gif" /></div>
+</div>
+<div class="translation-in "><select id="ddlTarget" class="form-control select-lang notranslate">
+<option value="en" id="english">English</option>
+<option value="fr" id="french">French</option>
+<option value="de" id="german">German</option>
+<option value="ja" id="japan">Japanese</option>
+<option value="ko" id="korea">Korean</option>
+<option value="es" id="spanish">Spanish</option>
+</select>  <input type="button" id="btnTranslate" class="btn btn-success" value="Translate" />
+<div class="msgsuccess" style="display: none;">Success</div>
+<div class="msgerror" style="display: none;">Failed to translate</div>
+</div>
+<script>// <![CDATA[
+$(document).ready(function(){	
+	
+	
+	 
+	$("#btnTranslate").on("click", function(){
+	
+           $( '.lds-ellipsis' ).show();
+		$('.loader-div').show();
+		setTimeout(translatePage, 1000);
+		
+	});
+});
+
+
+
+function translatePage() {
+
+      var blogcontent = $(".Content ").html();
+      var arrayOfObjects= [
+				  {"id":".Content ", "content":blogcontent}
+				  
+				            ];
+		
+	
+	  
+	      var dateStringWithTime=new Date().toISOString(). replace(/T/, ' ').replace(/\..+/, '');
+	      var str="italentdigital";
+	      var res=str+"_"+dateStringWithTime;
+	      var encodedStr=btoa(res);	
+            var  communityid="50e0f11c-9af9-441c-96b0-37573496a5fc";			
+		   var targetLanguage=$("#ddlTarget").val();
+		if(targetLanguage == "en"){
+			location.reload();
+		}else{	
+                  	translateAll(arrayOfObjects, targetLanguage, communityid, encodedStr);						
+			}
+        
+}
+
+function translateAll(entities, language, id, token) {
+   
+	Promise.all(entities.map(function(entity, index){
+		var data = {
+			content: encodeURIComponent(entity.content),
+			targetLanguage: language,
+			communityid :id
+		};
+		return translate(data, token);
+	})).then(function(translatedContents) {
+			translatedContents.forEach(function(response, index){
+				$(entities[index].id).html(response);
+			});
+			$( '.lds-ellipsis' ).hide();
+			$('.loader-div').hide();
+			//$('.msgsuccess').show();
+			
+			
+   }).catch(function(error){
+                  $( '.lds-ellipsis' ).hide();
+		           $('.loader-div').hide();
+                    
+		       $('.msgerror').show();
+		      
+			
+		});
+             
+
+}
+
+function translate(data, token) {		
+	return new Promise(function(resolve, reject){
+		$.ajax({
+			type: 'POST',
+			async: false,
+			contentType:"application/json",
+			headers: { token: token},
+			url: 'https://italentics.dev/higher-logic/translate',
+			data: JSON.stringify(data),
+			success: function(response, statusText, statusData) {
+				if (!!response && !!response.message) {
+					resolve(response.message);
+				} else {
+					console.log('No response found for the translation');
+					console.log(response);
+					reject('No response');
+				}
+			},
+			error: function(error,statusText, statusData) {
+				reject(error);
+			}
+		
+		});
+	
+	});
+
+}
+// ]]></script>
+</div>
+</div>
